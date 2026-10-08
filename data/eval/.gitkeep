@@ -1,0 +1,2 @@
+# 这个目录存放评测集（eval_set.jsonl）
+# 默认不进 Git（见 .gitignore），因为可以从 HotpotQA 重新生成

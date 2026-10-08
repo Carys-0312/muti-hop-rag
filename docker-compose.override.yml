@@ -1,0 +1,48 @@
+# ============================================================
+#  开发模式覆盖配置
+#
+#  docker compose 会自动加载 docker-compose.override.yml
+#  （不需要 -f 参数，这是约定）
+#
+#  核心思路：
+#    依赖装在【镜像】里  → 只 build 一次
+#    代码挂在【卷】里    → 改完立刻生效，不用重建镜像
+#
+#  这就是用 Docker 做开发的正确姿势：
+#    镜像负责"环境不变"，挂载负责"代码可变"
+# ============================================================
+
+services:
+
+  api:
+    volumes:
+      # ── 代码挂载：改完即生效 ──
+      # ⚠️ 这几个目录在镜像里已经有一份，挂载是"覆盖"它们
+      #    （这正是我们想要的：用本机代码替换镜像里的代码）
+      - ./src:/app/src
+      - ./configs:/app/configs
+      - ./scripts:/app/scripts
+
+      # ── 数据与结果：让容器和本机共享 ──
+      - ./data:/app/data
+      - ./results:/app/results
+
+      # ── 模型缓存：重建容器不用重新下载 BGE 模型 ──
+      # （和 docker-compose.yml 里同名同路径，override 会覆盖它，不会重复）
+      - hf-cache:/root/.cache/huggingface
+
+    # --reload：改动 src/ 下的代码，服务自动重启
+    # 生产环境要去掉 --reload（它不适合生产）
+    command:
+      - uvicorn
+      - multihop_rag.api.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/src
+
+    environment:
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}

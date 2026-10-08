@@ -1,0 +1,58 @@
+# ============================================================
+#  生产环境配置（部署到服务器时用）
+#
+#  用法：
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+#  ⚠️ 为什么必须显式写 -f：
+#     如果只写 `docker compose up -d`，compose 会自动加载
+#     docker-compose.override.yml（开发配置）—— 它会挂载本机 ./src
+#     覆盖容器里的代码。服务器上没有那个目录，服务会跑不起来。
+#
+#  这个文件相对 docker-compose.yml 只做「增量修改」，
+#  和开发配置的区别：
+#    开发（override）→ 挂载代码 + --reload        改动立即生效
+#    生产（这个文件）→ 用镜像里的代码 + 多 worker  稳定、不依赖宿主机文件
+# ============================================================
+
+services:
+
+  api:
+    volumes:
+      # ⭐ 只挂【数据】，不挂代码 —— 代码用镜像里 bake 好的那份
+      - ./data:/app/data
+      - ./results:/app/results
+      # 模型缓存持久化：重建容器不用重新下载 BGE 模型
+      - hf-cache:/root/.cache/huggingface
+
+    # ⭐ 生产不用 --reload（它会监视文件、占资源，且不适合生产）
+    #    workers=2 提高并发；注意每个 worker 会各加载一份 embedding 模型，
+    #    内存紧张（<4GB）就改成 1
+    command:
+      - uvicorn
+      - multihop_rag.api.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --workers
+      - "2"
+      - --log-level
+      - warning
+
+    environment:
+      MHRAG_ENV: production
+
+    # 日志轮转，避免日志把磁盘写满
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # 内存上限（超过会被 Docker 杀掉而不是拖垮整台机器）
+    # 如果服务器内存小于 4GB，把这里调小并同步把 workers 改成 1
+    deploy:
+      resources:
+        limits:
+          memory: 3g

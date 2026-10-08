@@ -1,0 +1,50 @@
+# ⭐ 统一换行符 —— 这个文件很重要，别删
+#
+# 为什么需要：
+#   Git 在 Windows 上默认会把文本文件的 LF 转成 CRLF（core.autocrlf=true）。
+#   本项目部署在 Linux 服务器上，如果 .sh 脚本被转成 CRLF，
+#   在 Linux 上执行会报：
+#       bash: ./deploy-server.sh: /bin/bash^M: bad interpreter: No such file or directory
+#   （那个 ^M 就是 CRLF 里的 \r）
+#
+#   .gitattributes 的规则优先级高于 core.autocrlf，能强制指定换行符，
+#   保证无论在 Windows 还是 Linux 检出，脚本都是 LF。
+
+# 默认：所有文本文件统一用 LF
+* text=auto eol=lf
+
+# shell 脚本必须是 LF（Linux 上执行）
+*.sh    text eol=lf
+*.bash  text eol=lf
+Dockerfile text eol=lf
+Makefile   text eol=lf
+
+# PowerShell 脚本用 CRLF（Windows 习惯，且 PS 5.1 对此不敏感）
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+
+# 代码与配置
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.toml  text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+
+# 二进制文件不做换行符转换
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.onnx  binary
+*.gz    binary
+*.zip   binary
+
+# 让 git diff 正确识别 notebook（可选，有装 nbstripout 时更好用）
+*.ipynb diff=jupyternotebook
+
+# 语言统计：把 notebook 里的代码也算进 Python
+*.ipynb linguist-language=Jupyter Notebook

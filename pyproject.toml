@@ -1,0 +1,51 @@
+[project]
+name = "multi-hop-rag"
+version = "0.1.0"
+description = "基于 LangGraph 的自适应多跳检索问答系统"
+requires-python = ">=3.11"
+dependencies = [
+    # 编排
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-core>=0.3.0",
+    "langchain-community>=0.3.0",
+    "langchain-openai>=0.2.0",
+    # 检索
+    "qdrant-client>=1.12.0",
+    # ⭐ embedding 用 fastembed（ONNX），不装 PyTorch —— 省下约 2.7GB
+    "fastembed>=0.4.0",
+    # 缓存
+    "redis>=5.0.0",
+    # 数据
+    "datasets>=3.0.0",
+    "pandas>=2.0.0",
+    # Web 层
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    # 基础
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.66.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyter>=1.0.0",
+    "matplotlib>=3.8.0",
+    "ipykernel>=6.29.0",
+]
+
+[project.scripts]
+mhrag = "multihop_rag.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

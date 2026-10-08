@@ -1,0 +1,97 @@
+# ============================================================
+#  项目配置
+#  所有可调参数集中在这里。改参数不用改代码。
+#  环境变量可以覆盖部分项（见 src/multihop_rag/config.py）
+# ============================================================
+
+# ── 检索 ──
+retrieval:
+  top_k: 5                                    # 每次检索取几条
+  embedding_model: BAAI/bge-small-en-v1.5     # fastembed 的 ONNX 模型（384 维，CPU 可跑）
+  collection: hotpotqa                        # Qdrant 里的集合名
+  batch_size: 64                              # 向量化批大小（低配服务器可调小，如 32）
+
+  # ⭐ Qdrant 客户端超时（秒）
+  #    qdrant-client 默认只有 5 秒 —— 在 1 核 2G 这类低配服务器上，
+  #    一批 64 条的 upsert 经常超过 5 秒，会抛
+  #        ResponseHandlingException: timed out
+  #    导致建索引中断。默认给到 120 秒。
+  qdrant_timeout: 120
+  # ⚠️ 下面这个前缀【不需要手动加】：
+  #    embedder 用的是 fastembed 的 query_embed()，
+  #    它会按模型内置配置自动给 query 侧加前缀（文档侧不加）。
+  #    留在这里仅作说明文档。
+  query_instruction: "Represent this sentence for searching relevant passages: "
+
+# ── Agent（多跳） ──
+agent:
+  min_hop: 1             # ⭐ 最少跳几次（1 = 完全信任 judge 的判断）
+                              #    设为 2 可验证"judge 是否过早说够了"
+  max_hop: 3                  # ⭐ 硬性最大跳数（防止无限循环）
+  temperature: 0              # ⭐ 判断任务必须 0，保证可复现
+  max_evidence_chars: 8000   # 塞进 prompt 的证据最大字符数（控制 token）
+  evidence_snippet_chars: 2000 # 单条证据截断长度
+
+  # ⭐ 结构化输出的实现方式（LangChain with_structured_output 的 method 参数）
+  #
+  #   function_calling  → 走 tools 机制，【DeepSeek 支持】← 用这个
+  #   json_schema       → OpenAI 的 response_format，DeepSeek 不支持（会 400）
+  #   json_mode         → 只保证输出 JSON，不保证符合 schema
+  #
+  # 报错特征：400 "This response_format type is unavailable now" → 就是这个参数
+  structured_output_method: function_calling
+
+# ── 缓存 ──
+cache:
+  enabled: true
+  ttl: 3600                   # 缓存过期时间（秒）
+  namespace: "mhrag"          # Redis key 前缀
+
+# ── 评测 ──
+eval:
+  eval_set: data/eval/eval_set.jsonl
+  results_dir: results
+  top_k_for_recall: 5         # 算 Recall@k 的 k
+  sample_size: 200            # 评测集规模
+
+# ── 数据 ──
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  eval_dir: data/eval
+  corpus_file: data/processed/corpus.jsonl
+
+  # ⭐ 用哪个 split（实测结论，别改成 validation）
+  #
+  #   split       条数      level 分布
+  #   validation  7,405     {'hard': 7405}          ❌ 整列单一值
+  #   train       90,447    {'easy': 17972, 'medium': 56814, 'hard': 15661}  ✅
+  #
+  # 原因：HotpotQA 的 dev/test 集是【刻意筛成全难题】的（让榜单更有挑战性），
+  #       所以 validation 里的 level 字段没有区分度，做不了分难度分析。
+  #       train 保留了完整的三档难度，且数据量大 12 倍。
+  split: train
+
+  # ⭐ 用多少个问题来构建文档库
+  #
+  # HotpotQA distractor 每题自带 10 篇候选文档（2 篇金标准 + 8 篇干扰），
+  # 所以【标准任务】就是"从这 10 篇里挑出需要的那 2 篇"。
+  #
+  # 只索引评测问题用到的候选文档：
+  #   600 题 × 10 篇 ≈ 5500 篇（去重后）→ 建索引约 8~10 分钟
+  #
+  # 如果索引全量（9 万题 ≈ 20 万篇）：要跑几个小时，且偏离标准设定。
+  #
+  # 为什么是 600：
+  #   评测集要 200 条，每种 (类型 × 难度) 组合至少 10 条。
+  #   train 里最稀有的组合是 comparison/hard（约 3.5%），
+  #   600 题时期望约 21 条，留足余量。
+  #
+  # ⚠️ 这个值必须和评测集一致（两个脚本都读这里，自动保持一致）
+  corpus_questions: 600
+
+# ── Web 层 ──
+api:
+  host: 0.0.0.0
+  port: 8000
+  title: "多跳检索问答 Agent"

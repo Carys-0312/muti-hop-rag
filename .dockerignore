@@ -1,0 +1,38 @@
+# 构建时排除的东西 —— 让镜像更小、构建更快
+# 用法：docker build 时自动生效
+
+# 数据和模型（体积大，且不该进镜像）
+data/raw/
+data/processed/
+models/
+.cache/
+
+# 虚拟环境和缓存
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# 结果和 notebook
+results/
+notebooks/
+
+# ⚠️ 密钥绝对不能进镜像
+.env
+.env.local
+
+# 文档（镜像里用不到）
+PLAN.md
+*.md
+!README.md
+
+# 编辑器
+.git/
+.gitignore
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,33 @@
+# ── 密钥 / 环境 ──
+.env
+.env.local
+
+# ── 数据（体积大，且可能含敏感内容）──
+data/raw/
+data/processed/
+data/eval/*.jsonl
+!data/eval/.gitkeep
+
+# ── 模型缓存 ──
+.cache/
+models/
+
+# ── 结果（保留 comparison.md，其余忽略）──
+results/*.json
+!results/comparison.md
+!results/.gitkeep
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+
+# ── 系统 / 编辑器 ──
+.DS_Store
+.idea/
+.vscode/
